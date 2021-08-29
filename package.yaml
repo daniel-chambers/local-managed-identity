@@ -1,0 +1,67 @@
+name:                local-managed-identity
+version:             1.0.0.0
+github:              "daniel-chambers/local-managed-identity"
+license:             MIT
+author:              "Daniel Chambers"
+maintainer:          "daniel@digitallycreated.net"
+copyright:           "2021 Daniel Chambers"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/daniel-chambers/local-managed-identity#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- aeson
+- containers
+- fast-logger
+- http-types
+- old-locale
+- optparse-applicative
+- process-extras
+- scotty
+- text
+- thyme
+- transformers
+- uuid
+- vector-space
+- wai
+- warp
+
+default-extensions:
+- RecordWildCards
+- OverloadedStrings
+
+library:
+  source-dirs: src
+
+executables:
+  local-managed-identity-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - local-managed-identity
+
+tests:
+  local-managed-identity-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - local-managed-identity
