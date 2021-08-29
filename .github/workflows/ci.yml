@@ -1,0 +1,66 @@
+name: CI Build
+on:
+  push:
+    paths-ignore:
+      - '**.md'
+      - .editorconfig
+      - .gitignore
+      - LICENCE
+
+jobs:
+  build:
+    name: Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ windows-2019, ubuntu-20.04, macos-10.15 ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Stack (Windows)
+        run: choco install haskell-stack
+        if: matrix.os == 'windows-2019'
+
+      - name: Install Stack (MacOS)
+        run: curl -sSL https://get.haskellstack.org/ | sh
+        if: matrix.os == 'macos-10.15'
+
+      - name: Cache Stack GHC and Dependencies (Unix)
+        uses: actions/cache@v2
+        if: matrix.os != 'windows-2019'
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock') }}
+
+      - name: Cache Stack Dependencies (Windows)
+        uses: actions/cache@v2
+        if: matrix.os == 'windows-2019'
+        with:
+          path: '%SystemDrive%\sr'
+          key: ${{ runner.os }}-stack-deps-${{ hashFiles('stack.yaml.lock') }}
+
+      - name: Cache Stack GHC (Windows)
+        uses: actions/cache@v2
+        if: matrix.os == 'windows-2019'
+        with:
+          path: '%USERPROFILE%\AppData\Local\Programs\stack'
+          key: ${{ runner.os }}-stack-deps-${{ hashFiles('stack.yaml.lock') }}
+
+      - name: Build
+        run: stack build
+
+      - name: Copy Binary
+        shell: bash
+        run: |
+          mkdir bin
+          binDir=$(stack path --dist-dir)/build/local-managed-identity-exe
+          [[ -e "$binDir/local-managed-identity-exe.exe" ]] && cp "$binDir/local-managed-identity-exe.exe" ./bin/local-managed-identity.exe
+          [[ -e "$binDir/local-managed-identity-exe" ]] && cp "$binDir/local-managed-identity-exe" ./bin/local-managed-identity
+
+      - name: Upload Package
+        uses: actions/upload-artifact@v1
+        with:
+          name: local-managed-identity-${{ runner.os }}
+          path: bin
