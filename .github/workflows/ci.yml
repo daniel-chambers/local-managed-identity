@@ -35,28 +35,22 @@ jobs:
         uses: actions/cache@v2
         if: matrix.os == 'windows-2019'
         with:
-          path: '%LOCALAPPDATA%\Programs\stack'
-          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'local-managed-identity.cabal') }}
+          path: '~/AppData/Local/Programs/stack'
+          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'local-managed-identity.cabal') }}-v2
 
       - name: Build
+        run: stack build
+
+      - name: Copy Binary
         shell: bash
         run: |
-          stack path
-          echo "STACK_ROOT=$STACK_ROOT"
+          mkdir bin
+          binDir=$(stack path --dist-dir)/build/local-managed-identity-exe
+          [[ -e "$binDir/local-managed-identity-exe.exe" ]] && cp "$binDir/local-managed-identity-exe.exe" ./bin/local-managed-identity.exe
+          [[ -e "$binDir/local-managed-identity-exe" ]] && cp "$binDir/local-managed-identity-exe" ./bin/local-managed-identity
 
-      # - name: Build
-      #   run: stack build
-
-      # - name: Copy Binary
-      #   shell: bash
-      #   run: |
-      #     mkdir bin
-      #     binDir=$(stack path --dist-dir)/build/local-managed-identity-exe
-      #     [[ -e "$binDir/local-managed-identity-exe.exe" ]] && cp "$binDir/local-managed-identity-exe.exe" ./bin/local-managed-identity.exe
-      #     [[ -e "$binDir/local-managed-identity-exe" ]] && cp "$binDir/local-managed-identity-exe" ./bin/local-managed-identity
-
-      # - name: Upload Package
-      #   uses: actions/upload-artifact@v1
-      #   with:
-      #     name: local-managed-identity-${{ runner.os }}
-      #     path: bin
+      - name: Upload Package
+        uses: actions/upload-artifact@v1
+        with:
+          name: local-managed-identity-${{ runner.os }}
+          path: bin
