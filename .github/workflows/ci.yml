@@ -16,7 +16,7 @@ jobs:
       matrix:
         os:
           - windows-2019
-          - ubuntu-20.04
+          # - ubuntu-20.04
           # Remove MacOS for now while Thyme fails to build: https://github.com/liyang/thyme/issues/72
           # - macos-10.15
 
@@ -39,18 +39,24 @@ jobs:
           key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'local-managed-identity.cabal') }}
 
       - name: Build
-        run: stack build
-
-      - name: Copy Binary
         shell: bash
         run: |
-          mkdir bin
-          binDir=$(stack path --dist-dir)/build/local-managed-identity-exe
-          [[ -e "$binDir/local-managed-identity-exe.exe" ]] && cp "$binDir/local-managed-identity-exe.exe" ./bin/local-managed-identity.exe
-          [[ -e "$binDir/local-managed-identity-exe" ]] && cp "$binDir/local-managed-identity-exe" ./bin/local-managed-identity
+          stack path
+          echo "STACK_ROOT=$STACK_ROOT"
 
-      - name: Upload Package
-        uses: actions/upload-artifact@v1
-        with:
-          name: local-managed-identity-${{ runner.os }}
-          path: bin
+      # - name: Build
+      #   run: stack build
+
+      # - name: Copy Binary
+      #   shell: bash
+      #   run: |
+      #     mkdir bin
+      #     binDir=$(stack path --dist-dir)/build/local-managed-identity-exe
+      #     [[ -e "$binDir/local-managed-identity-exe.exe" ]] && cp "$binDir/local-managed-identity-exe.exe" ./bin/local-managed-identity.exe
+      #     [[ -e "$binDir/local-managed-identity-exe" ]] && cp "$binDir/local-managed-identity-exe" ./bin/local-managed-identity
+
+      # - name: Upload Package
+      #   uses: actions/upload-artifact@v1
+      #   with:
+      #     name: local-managed-identity-${{ runner.os }}
+      #     path: bin
