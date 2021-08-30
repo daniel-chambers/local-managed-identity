@@ -35,8 +35,10 @@ jobs:
         uses: actions/cache@v2
         if: matrix.os == 'windows-2019'
         with:
-          path: '~/AppData/Local/Programs/stack'
-          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'local-managed-identity.cabal') }}-v2
+          path: |
+            ~/AppData/Local/Programs/stack
+            ~/AppData/Roaming/stack
+          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'local-managed-identity.cabal') }}-v3
 
       - name: Build
         run: stack build
