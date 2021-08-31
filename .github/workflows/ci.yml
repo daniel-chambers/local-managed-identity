@@ -29,7 +29,7 @@ jobs:
         if: matrix.os != 'windows-2019'
         with:
           path: ~/.stack
-          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'local-managed-identity.cabal') }}
+          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'package.yaml') }}
 
       - name: Cache Stack GHC and Dependencies (Windows)
         uses: actions/cache@v2
@@ -38,7 +38,7 @@ jobs:
           path: |
             ~/AppData/Local/Programs/stack
             ~/AppData/Roaming/stack
-          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'local-managed-identity.cabal') }}-v3
+          key: ${{ runner.os }}-stack-${{ hashFiles('stack.yaml.lock', 'package.yaml') }}-v3
 
       - name: Build
         run: stack build
