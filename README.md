@@ -32,14 +32,26 @@ Set the `MSI_ENDPOINT` and `MSI_SECRET` environment variables as specified in th
 
 If you're running your application from inside Docker container, you'll need to use `host.docker.internal` instead of `localhost` on Windows and Mac systems to ensure you get the host PC's IP address correctly inside the container. The terminal output shows example parameters you can pass to `docker run`.
 
+There are some parameters you can pass to the executable to set some settings:
+```
+Available options:
+  -h,--help                Show this help text
+  -v,--version             Prints the version of the application and quits
+  -p,--port PORT           The port the server will run on (default: 5436)
+  -s,--secret VALUE        The required value of the 'secret' header that must
+                           be sent by the client in its requests. If omitted, a
+                           random GUID will be used.
+  -c,--cache-tokens        Enables in-memory caching of tokens until just before
+                           expiry. Without caching Azure CLI is invoked on every
+                           request.
+```
+
 ## How to Build
 This project uses [Stack](https://haskellstack.org/) to build.
 
 ```
-> stack setup
 > stack build
 ```
-The `setup` command is only required the first time to ensure you have the correct version of GHC installed.
 
 
 [1]: https://github.com/Azure/azure-sdk-for-net/tree/main/sdk/identity/Azure.Identity

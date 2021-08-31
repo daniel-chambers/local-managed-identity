@@ -1,5 +1,6 @@
 module LMI.WebApi
-  ( runWebApi
+  ( ApiSettings(..)
+  , runWebApi
   , SecretValue(..)
   , Port
   ) where
@@ -17,7 +18,7 @@ import           Data.Thyme.Time (UTCTime, getCurrentTime, fromSeconds)
 import           GHC.Base (join)
 import           LMI.AzureCli (AccessToken(..), AccessTokenParams(..), AccessTokenError(..), Error(..))
 import qualified LMI.AzureCli as AzureCli
-import           LMI.Cache (Cache, readCache, putCache, newCache)
+import           LMI.Cache (Cache(readCache, putCache), newMVarCache, MVarCache, noCache)
 import           Network.HTTP.Types.Status (status401, status500)
 import           Network.Wai (Request, queryString)
 import           Network.Wai.Handler.Warp (Port, defaultSettings, setPort)
@@ -52,21 +53,31 @@ instance ToJSON ErrorResponse where
 
 newtype SecretValue = SecretValue Text
 
-runWebApi :: FastLogger -> Port -> SecretValue -> IO ()
-runWebApi log port secretValue = do
-  accessTokenCache <- newCache
-  scottyOpts scottyOptions (api log secretValue accessTokenCache)
+data ApiSettings =
+  ApiSettings { _asPort :: Port
+              , _asSecretValue :: SecretValue
+              , _asCacheTokens :: Bool }
+
+runWebApi :: FastLogger -> ApiSettings -> IO ()
+runWebApi log ApiSettings{..} = do
+  api' <-
+    if _asCacheTokens then do
+      api log _asSecretValue <$> newMVarCache
+    else
+      pure $ api log _asSecretValue noCache
+
+  scottyOpts scottyOptions api'
   where
     scottyOptions = Options silent settings
     silent = 0
-    settings = setPort port defaultSettings
+    settings = setPort _asPort defaultSettings
 
-api :: FastLogger -> SecretValue -> Cache (Maybe Resource) AccessToken -> ScottyM ()
+api :: Cache cache => FastLogger -> SecretValue -> cache (Maybe Resource) AccessToken -> ScottyM ()
 api log expectedSecret accessTokenCache = do
   get "/" (getAccessTokenRoute log expectedSecret accessTokenCache)
 
 
-getAccessTokenRoute :: FastLogger -> SecretValue -> Cache (Maybe Resource) AccessToken -> ActionM ()
+getAccessTokenRoute :: Cache cache => FastLogger -> SecretValue -> cache (Maybe Resource) AccessToken -> ActionM ()
 getAccessTokenRoute log (SecretValue expectedSecret) accessTokenCache = do
   secret <- fmap toStrict <$> header "secret"
   resource <- lookupQueryParam "resource" <$> request
@@ -107,7 +118,7 @@ getAccessTokenRoute log (SecretValue expectedSecret) accessTokenCache = do
     logText :: MonadIO m => Text -> m ()
     logText = liftIO . log . toLogStr
 
-tryAccessTokenCache :: MonadIO m => Maybe Resource -> Cache (Maybe Resource) AccessToken -> m (Maybe AccessToken)
+tryAccessTokenCache :: (MonadIO m, Cache cache) => Maybe Resource -> cache (Maybe Resource) AccessToken -> m (Maybe AccessToken)
 tryAccessTokenCache resource cache = do
   cachedAccessToken <- readCache resource cache
   case cachedAccessToken of

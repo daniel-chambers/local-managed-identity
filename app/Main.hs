@@ -7,13 +7,15 @@ import           Data.Text.IO (putStrLn)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V4 as UUID
 import           Data.Version (showVersion)
-import           LMI.WebApi (runWebApi, Port(..), SecretValue(..))
-import           Options.Applicative (Parser, auto, help, hidden, info, infoOption, long, metavar, option, progDesc, short, value, execParser)
+import           LMI.WebApi (ApiSettings(..), runWebApi, Port(..), SecretValue(..))
+import           Options.Applicative (Parser, auto, help, hidden, info, infoOption, long, metavar, option, strOption, progDesc, short, value, execParser, optional, switch, helper, showDefault)
 import           System.Log.FastLogger (LogType'(..), newTimeCache, simpleTimeFormat, withTimedFastLogger, defaultBufSize, ToLogStr (toLogStr))
 import qualified Paths_local_managed_identity as PackageInfo
 
-newtype CommandLineArguments =
-  CommandLineArguments { _claPort :: Port }
+data CommandLineArguments =
+  CommandLineArguments { _claPort :: Port
+                       , _claSecret :: Maybe Text
+                       , _claCacheTokens :: Bool }
 
 commandLineArgumentsParser :: Parser CommandLineArguments
 commandLineArgumentsParser =
@@ -21,8 +23,19 @@ commandLineArgumentsParser =
   <$> option auto
     ( long "port"
       <> short 'p'
+      <> help "The port the server will run on"
       <> value 5436
+      <> showDefault
       <> metavar "PORT" )
+  <*> optional (strOption
+    ( long "secret"
+      <> short 's'
+      <> help "The required value of the 'secret' header that must be sent by the client in its requests. If omitted, a random GUID will be used."
+      <> metavar "VALUE" ))
+  <*> switch
+    ( long "cache-tokens"
+      <> help "Enables in-memory caching of tokens until just before expiry. Without caching Azure CLI is invoked on every request."
+      <> short 'c' )
 
 version :: Parser (a -> a)
 version =
@@ -35,14 +48,16 @@ version =
 
 readArguments :: IO CommandLineArguments
 readArguments =
-  execParser $ info (version <*> commandLineArgumentsParser) argsInfo
+  execParser $ info (helper <*> version <*> commandLineArgumentsParser) argsInfo
   where argsInfo = progDesc "Local Managed Identity"
 
 main :: IO ()
 main = do
   timeCache <- newTimeCache "%Y-%m-%d %H:%M:%S"
   CommandLineArguments{..} <- readArguments
-  secret <- UUID.toText <$> UUID.nextRandom
+  secret <- case _claSecret of
+    Just secret -> pure secret
+    Nothing -> UUID.toText <$> UUID.nextRandom
 
   withTimedFastLogger timeCache (LogStdout defaultBufSize) $ \timedFastLogger -> do
     let fastLogger logStr = timedFastLogger (\time -> "[" <> toLogStr time <> "] " <> logStr <> "\n")
@@ -59,7 +74,7 @@ main = do
     putStrLn "-----------------------------------------"
     putStrLn "Server started. Ctrl+C to quit."
 
-    runWebApi fastLogger _claPort (SecretValue secret)
+    runWebApi fastLogger (ApiSettings _claPort (SecretValue secret) _claCacheTokens)
 
 showt :: Show a => a -> Text
 showt = Text.pack . show
